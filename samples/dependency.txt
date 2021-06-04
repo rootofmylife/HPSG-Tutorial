@@ -1,0 +1,18 @@
+1	The	_	DT	DT	_	4	det	_	_
+2	luxury	_	NN	NN	_	4	nn	_	_
+3	auto	_	NN	NN	_	4	nn	_	_
+4	maker	_	NN	NN	_	7	nsubj	_	_
+5	last	_	JJ	JJ	_	6	amod	_	_
+6	year	_	NN	NN	_	7	nsubj	_	_
+7	sold	_	VBD	VBD	_	0	root	_	_
+8	1,214	_	CD	CD	_	9	num	_	_
+9	cars	_	NNS	NNS	_	7	dobj	_	_
+10	in	_	IN	IN	_	7	prep	_	_
+11	the	_	DT	DT	_	12	det	_	_
+12	U.S.	_	NNP	NNP	_	10	pobj	_	_
+
+1	Ms.	_	NNP	NNP	_	2	nn	_	_
+2	Haag	_	NNP	NNP	_	3	nsubj	_	_
+3	plays	_	VBZ	VBZ	_	0	root	_	_
+4	Elianti	_	NNP	NNP	_	3	dobj	_	_
+5	.	_	.	.	_	3	punct	_	_
