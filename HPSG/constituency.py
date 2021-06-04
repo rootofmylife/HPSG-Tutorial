@@ -28,9 +28,18 @@ class Constituency(object):
             if tree.label in ("TOP", "ROOT"):
                 self._trees[i] = tree.children[0]
 
+        self._pro_trees = []
+        for i, tree in enumerate(self._trees):
+            new_tree = self.process_NONE(tree)
+            self._pro_trees.append(new_tree)
+
+        self._parse_tree = [tree.convert() for tree in self._pro_trees]
+
+    def get_parse_tree(self):
+        return self._parse_tree
+
     def get_hpsg_tree(self):
-        hpsg_tree = [tree.convert() for tree in self._trees]
-        return [[(leaf.tag, leaf.word) for leaf in tree.leaves()] for tree in hpsg_tree]
+        return [[(leaf.tag, leaf.word) for leaf in tree.leaves()] for tree in self._parse_tree]
 
     # (TOP (S (NP (NNP Ms.) (NNP Haag)) (VP (VBZ plays) (NP (NNP Elianti))) (. .)))
     def process(self, index, flag_sent):
@@ -70,6 +79,27 @@ class Constituency(object):
                 cun_word = 0
 
         return trees, index
+
+    def process_NONE(self, tree):
+        if isinstance(tree, LeafTreebankNode):
+            label = tree.tag
+            if label == '-NONE-':
+                return None
+            else:
+                return tree
+
+        tr = []
+        label = tree.label
+        if label == '-NONE-':
+            return None
+        for node in tree.children:
+            new_node = self.process_NONE(node)
+            if new_node is not None:
+                tr.append(new_node)
+        if tr == []:
+            return None
+        else:
+            return InternalTreebankNode(label, tr)
 
 
 class LeafTreebankNode(object):
