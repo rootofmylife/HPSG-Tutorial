@@ -19,9 +19,10 @@ class Constituency(object):
         self._trees, index = self.process(0, flag_sent=1)
 
         if index == len(self._tokens):
-            print("ok, good")
+            print("Processed HPSG trees successfull...")
         else:
-            print("oops, something's wrong!")
+            print("Failed to process HPSG trees...")
+            return
 
         for i, tree in enumerate(self._trees):
             if tree.label in ("TOP", "ROOT"):
