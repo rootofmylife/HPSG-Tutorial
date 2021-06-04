@@ -73,21 +73,13 @@ class Constituency(object):
 
 class LeafTreebankNode(object):
     def __init__(self, tag, word, head, father, type):
-        assert isinstance(tag, str)
         self.tag = tag
         self.father = father
         self.type = type
         self.head = head
-        assert isinstance(word, str)
         self.word = word
         self.left = self.head - 1
         self.right = self.head
-
-    def linearize(self):
-        return "({} {})".format(self.tag, self.word)
-
-    def leaves(self):
-        yield self
 
     def convert(self, index=0):
         return LeafParseNode(index, self.tag, self.word, self.father, self.type)
@@ -115,14 +107,6 @@ class InternalTreebankNode(object):
                 if child.father != self.head:
                     self.cun += 1
 
-    def linearize(self):
-        return "({} {})".format(
-            self.label, " ".join(child.linearize() for child in self.children))
-
-    def leaves(self):
-        for child in self.children:
-            yield from child.leaves()
-
     def convert(self, index=0, nocache=False):
         tree = self
         sublabels = [self.label]
@@ -132,7 +116,6 @@ class InternalTreebankNode(object):
             tree = tree.children[0]
             sublabels.append(tree.label)
 
-        pre_children = []
         children = []
         sub_father = set()
         sub_head = set()
@@ -177,29 +160,16 @@ class InternalTreebankNode(object):
 
 class LeafParseNode(object):
     def __init__(self, index, tag, word, father, type):
-        assert isinstance(index, int)
-        assert index >= 0
         self.left = index
         self.right = index + 1
-
-        assert isinstance(tag, str)
         self.tag = tag
         self.head = index + 1
         self.father = father
         self.type = type
-
-        assert isinstance(word, str)
         self.word = word
 
     def leaves(self):
         yield self
-
-    def chil_enclosing(self, left, right):
-        assert self.left <= left < right <= self.right
-        return self
-
-    def convert(self):
-        return LeafTreebankNode(self.tag, self.word, self.head, self.father, self.type)
 
 
 class InternalParseNode(object):
@@ -213,13 +183,12 @@ class InternalParseNode(object):
         self.father = self.children[0].father
         self.type = self.children[0].type
         self.head = self.children[0].head
-        flag = 0
+
         for child in self.children:
             if int(child.father) - 1 < int(self.left) or int(child.father) > int(self.right):
                 self.father = child.father
                 self.type = child.type
                 self.head = child.head
-                flag = 1
 
         self.cun_w = 0
         for child in self.children:
@@ -233,47 +202,3 @@ class InternalParseNode(object):
     def leaves(self):
         for child in self.children:
             yield from child.leaves()
-
-    def convert(self):
-        children = [child.convert() for child in self.children]
-        tree = InternalTreebankNode(self.label[-1], children)
-        for sublabel in reversed(self.label[:-1]):
-            tree = InternalTreebankNode(sublabel, [tree])
-        return tree
-
-    def enclosing(self, left, right):
-        assert self.left <= left < right <= self.right
-        for child in self.children:
-            if isinstance(child, LeafParseNode):
-                continue
-            if child.left <= left < right <= child.right:
-                return child.enclosing(left, right)
-        return self
-
-    def chil_enclosing(self, left, right):
-        assert self.left <= left < right <= self.right
-        for child in self.children:
-            if child.left <= left < right <= child.right:
-                return child.chil_enclosing(left, right)
-        return self
-
-    def oracle_label(self, left, right):
-        enclosing = self.enclosing(left, right)
-        if enclosing.left == left and enclosing.right == right:
-            return enclosing.label
-        return ()
-
-    def oracle_type(self, left, right):
-        enclosing = self.chil_enclosing(left, right)
-        return enclosing.type
-
-    def oracle_head(self, left, right):
-        enclosing = self.chil_enclosing(left, right)
-        return enclosing.head
-
-    def oracle_splits(self, left, right):
-        return [
-            child.left
-            for child in self.enclosing(left, right).children
-            if left < child.left < right
-        ]
