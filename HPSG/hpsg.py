@@ -80,12 +80,6 @@ def vocabularies():
     char_vocab.freeze()
     type_vocab.freeze()
 
-    print(tag_vocab.values)
-    print(word_vocab.values)
-    print(label_vocab.values)
-    print(char_vocab.values)
-    print(type_vocab.values)
-
 def main():
     vocabularies()
 
