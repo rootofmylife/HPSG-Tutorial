@@ -85,6 +85,20 @@ class LeafTreebankNode(object):
         return LeafParseNode(index, self.tag, self.word, self.father, self.type)
 
 
+class LeafParseNode(object):
+    def __init__(self, index, tag, word, father, type):
+        self.left = index
+        self.right = index + 1
+        self.tag = tag
+        self.head = index + 1
+        self.father = father
+        self.type = type
+        self.word = word
+
+    def leaves(self):
+        yield self
+
+
 class InternalTreebankNode(object):
     def __init__(self, label, children):
         self.label = label
@@ -156,20 +170,6 @@ class InternalTreebankNode(object):
                 index = children[-1].right
 
         return InternalParseNode(tuple(sublabels), children, nocache=nocache)
-
-
-class LeafParseNode(object):
-    def __init__(self, index, tag, word, father, type):
-        self.left = index
-        self.right = index + 1
-        self.tag = tag
-        self.head = index + 1
-        self.father = father
-        self.type = type
-        self.word = word
-
-    def leaves(self):
-        yield self
 
 
 class InternalParseNode(object):
