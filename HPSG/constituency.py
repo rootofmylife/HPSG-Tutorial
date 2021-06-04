@@ -2,6 +2,7 @@ import collections.abc
 
 Sub_Head = "<H>"
 
+
 class Constituency(object):
     def __init__(self, file_path, heads, types) -> None:
         super().__init__()
@@ -55,7 +56,8 @@ class Constituency(object):
                 index += 1
 
                 if label != '-NONE-':
-                    trees.append(LeafTreebankNode(label, word, head=cun_word + 1, father=self.head[cun_sent][cun_word], type=self.type[cun_sent][cun_word]))
+                    trees.append(LeafTreebankNode(label, word, head=cun_word + 1,
+                                 father=self.head[cun_sent][cun_word], type=self.type[cun_sent][cun_word]))
                     cun_word += 1
 
             while paren_count > 0:
@@ -65,34 +67,9 @@ class Constituency(object):
             if flag_sent == 1:
                 cun_sent += 1
                 cun_word = 0
-        
+
         return trees, index
 
-class LeafParseNode(object):
-    def __init__(self, index, tag, word, father, type):
-        assert isinstance(index, int)
-        assert index >= 0
-        self.left = index
-        self.right = index + 1
-
-        assert isinstance(tag, str)
-        self.tag = tag
-        self.head = index + 1
-        self.father = father
-        self.type = type
-
-        assert isinstance(word, str)
-        self.word = word
-
-    def leaves(self):
-        yield self
-
-    def chil_enclosing(self, left, right):
-        assert self.left <= left < right <= self.right
-        return self
-
-    def convert(self):
-        return LeafTreebankNode(self.tag, self.word, self.head, self.father, self.type)
 
 class LeafTreebankNode(object):
     def __init__(self, tag, word, head, father, type):
@@ -114,6 +91,7 @@ class LeafTreebankNode(object):
 
     def convert(self, index=0):
         return LeafParseNode(index, self.tag, self.word, self.father, self.type)
+
 
 class InternalTreebankNode(object):
     def __init__(self, label, children):
@@ -195,6 +173,34 @@ class InternalTreebankNode(object):
                 index = children[-1].right
 
         return InternalParseNode(tuple(sublabels), children, nocache=nocache)
+
+
+class LeafParseNode(object):
+    def __init__(self, index, tag, word, father, type):
+        assert isinstance(index, int)
+        assert index >= 0
+        self.left = index
+        self.right = index + 1
+
+        assert isinstance(tag, str)
+        self.tag = tag
+        self.head = index + 1
+        self.father = father
+        self.type = type
+
+        assert isinstance(word, str)
+        self.word = word
+
+    def leaves(self):
+        yield self
+
+    def chil_enclosing(self, left, right):
+        assert self.left <= left < right <= self.right
+        return self
+
+    def convert(self):
+        return LeafTreebankNode(self.tag, self.word, self.head, self.father, self.type)
+
 
 class InternalParseNode(object):
     def __init__(self, label, children, nocache=False):
