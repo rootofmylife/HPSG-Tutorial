@@ -40,7 +40,7 @@ def vocabularies():
 
     char_set = set()
 
-    for i, tree in enumerate(parse_tree):
+    for tree in parse_tree:
         nodes = [tree]
         while nodes:
             node = nodes.pop()
