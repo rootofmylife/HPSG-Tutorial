@@ -2,22 +2,21 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 
-from layer_normalization import LayerNormalization
-from feature_dropout import FeatureDropout
-from scaleddotproduct_attention import ScaledDotProductAttention
+from model.layer_normalization import LayerNormalization
+from model.feature_dropout import FeatureDropout
+from model.scaleddotproduct_attention import ScaledDotProductAttention
 
 class MultiHeadAttention(nn.Module):
     """
     Multi-head attention module
     """
 
-    def __init__(self, hparams, n_head, d_model, d_k, d_v, residual_dropout=0.1, attention_dropout=0.1, d_positional=None):
+    def __init__(self, n_head, d_model, d_k, d_v, residual_dropout=0.1, attention_dropout=0.1, d_positional=None):
         super(MultiHeadAttention, self).__init__()
 
         self.n_head = n_head
         self.d_k = d_k
         self.d_v = d_v
-        self.hparams = hparams
 
         if d_positional is None:
             self.partitioned = False

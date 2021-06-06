@@ -1,14 +1,18 @@
 import torch
 import torch.nn as nn
+import torch.nn.init as init
+
+from model.scaleddotproduct_attention import ScaledDotProductAttention
+from model.layer_normalization import LayerNormalization
+from model.feature_dropout import FeatureDropout
 
 class LabelAttention(nn.Module):
     """
     Single-head Attention layer for label-specific representations
     """
 
-    def __init__(self, hparams, d_model, d_k, d_v, d_l, d_proj, use_resdrop=True, q_as_matrix=False, residual_dropout=0.1, attention_dropout=0.1, d_positional=None):
+    def __init__(self, d_model, d_k, d_v, d_l, d_proj, use_resdrop=True, q_as_matrix=False, residual_dropout=0.1, attention_dropout=0.1, d_positional=None):
         super(LabelAttention, self).__init__()
-        self.hparams = hparams
         self.d_k = d_k
         self.d_v = d_v
         self.d_l = d_l # Number of Labels
@@ -16,7 +20,7 @@ class LabelAttention(nn.Module):
         self.d_proj = d_proj # Projection dimension of each label output
         self.use_resdrop = use_resdrop # Using Residual Dropout?
         self.q_as_matrix = q_as_matrix # Using a Matrix of Q to be multiplied with input instead of learned q vectors
-        self.combine_as_self = hparams.lal_combine_as_self # Using the Combination Method of Self-Attention
+        self.combine_as_self = False # Using the Combination Method of Self-Attention
 
         if d_positional is None:
             self.partitioned = False
@@ -28,18 +32,18 @@ class LabelAttention(nn.Module):
             self.d_positional = d_positional
 
             if self.q_as_matrix:
-                self.w_qs1 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
+                self.w_qs1 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
             else:
-                self.w_qs1 = nn.Parameter(torch_t.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
-            self.w_ks1 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
-            self.w_vs1 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_content, d_v // 2), requires_grad=True)
+                self.w_qs1 = nn.Parameter(torch.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
+            self.w_ks1 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_content, d_k // 2), requires_grad=True)
+            self.w_vs1 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_content, d_v // 2), requires_grad=True)
 
             if self.q_as_matrix:
-                self.w_qs2 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
+                self.w_qs2 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
             else:
-                self.w_qs2 = nn.Parameter(torch_t.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
-            self.w_ks2 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
-            self.w_vs2 = nn.Parameter(torch_t.FloatTensor(self.d_l, self.d_positional, d_v // 2), requires_grad=True)
+                self.w_qs2 = nn.Parameter(torch.FloatTensor(self.d_l, d_k // 2), requires_grad=True)
+            self.w_ks2 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_positional, d_k // 2), requires_grad=True)
+            self.w_vs2 = nn.Parameter(torch.FloatTensor(self.d_l, self.d_positional, d_v // 2), requires_grad=True)
 
             init.xavier_normal_(self.w_qs1)
             init.xavier_normal_(self.w_ks1)
@@ -50,11 +54,11 @@ class LabelAttention(nn.Module):
             init.xavier_normal_(self.w_vs2)
         else:
             if self.q_as_matrix:
-                self.w_qs = nn.Parameter(torch_t.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
+                self.w_qs = nn.Parameter(torch.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
             else:
-                self.w_qs = nn.Parameter(torch_t.FloatTensor(self.d_l, d_k), requires_grad=True)
-            self.w_ks = nn.Parameter(torch_t.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
-            self.w_vs = nn.Parameter(torch_t.FloatTensor(self.d_l, d_model, d_v), requires_grad=True)
+                self.w_qs = nn.Parameter(torch.FloatTensor(self.d_l, d_k), requires_grad=True)
+            self.w_ks = nn.Parameter(torch.FloatTensor(self.d_l, d_model, d_k), requires_grad=True)
+            self.w_vs = nn.Parameter(torch.FloatTensor(self.d_l, d_model, d_v), requires_grad=True)
 
             init.xavier_normal_(self.w_qs)
             init.xavier_normal_(self.w_ks)
@@ -136,7 +140,7 @@ class LabelAttention(nn.Module):
             q_padded = q_s.repeat(mb_size, 1, 1) # (d_l * mb_size) x 1 x d_k
         k_padded = k_s.new_zeros((n_head, mb_size, len_padded, d_k))
         v_padded = v_s.new_zeros((n_head, mb_size, len_padded, d_v))
-        invalid_mask = q_s.new_ones((mb_size, len_padded), dtype=DTYPE)
+        invalid_mask = q_s.new_ones((mb_size, len_padded), dtype=torch.bool)
 
         for i, (start, end) in enumerate(zip(batch_idxs.boundaries_np[:-1], batch_idxs.boundaries_np[1:])):
             if self.q_as_matrix:

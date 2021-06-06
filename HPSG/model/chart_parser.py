@@ -4,13 +4,13 @@ from torch import from_numpy
 
 import numpy as np
 
-from multilevel_embedding import MultiLevelEmbedding
-from encoder import Encoder
-from layer_normalization import LayerNormalization
-from dep_score import DepScore
+from model.multilevel_embedding import MultiLevelEmbedding
+from model.encoder import Encoder
+from model.layer_normalization import LayerNormalization
+from model.dep_score import DepScore
 
 class ChartParser(nn.Module):
-    def __init__(self, tag_vocab, word_vocab, label_vocab, char_vocab, type_vocab, params) -> None:
+    def __init__(self, tag_vocab, word_vocab, label_vocab, char_vocab, type_vocab):
         super().__init__()
 
         self.tag_vocab = tag_vocab
@@ -19,78 +19,74 @@ class ChartParser(nn.Module):
         self.char_vocab = char_vocab
         self.type_vocab = type_vocab
 
-        self.params = params
-
-        self.d_model = params.d_model
-        self.partitioned = params.partitioned
+        self.d_model = 1024
+        self.partitioned = True
         self.d_content = (self.d_model // 2) if self.partitioned else self.d_model
-        self.d_positional = (params.d_model // 2) if self.partitioned else None
+        self.d_positional = (self.d_model // 2) if self.partitioned else None
 
         # Use LAL
-        self.lal_d_kv = params.lal_d_kv
-        self.lal_d_proj = params.lal_d_proj
-        self.lal_resdrop = params.lal_resdrop
-        self.lal_pwff = params.lal_pwff
-        self.lal_q_as_matrix = params.lal_q_as_matrix
-        self.lal_partitioned = params.lal_partitioned
-        self.lal_combine_as_self = params.lal_combine_as_self
+        self.use_lal = True
+        self.lal_d_kv = 64
+        self.lal_d_proj = 64
+        self.lal_resdrop = True
+        self.lal_pwff = True
+        self.lal_q_as_matrix = False
+        self.lal_partitioned = True
+        self.lal_combine_as_self = False
 
         num_embeddings_map = {
-            'tags': tag_vocab.size,
-            'words': word_vocab.size,
-            'chars': char_vocab.size,
+            'tags': self.tag_vocab.size,
+            'words': self.word_vocab.size,
+            'chars': self.char_vocab.size,
         }
 
         emb_dropouts_map = {
-            'tags': params.tag_emb_dropout,
-            'words': params.word_emb_dropout,
+            'tags': 0.2,
+            'words': 0.4,
         }
 
         self.emb_types = ['tags', 'words']
 
         self.embedding = MultiLevelEmbedding(
             [num_embeddings_map[emb_type] for emb_type in self.emb_types],
-            params.d_model,
-            params=params,
+            self.d_model,
             d_positional=self.d_positional,
-            dropout=params.embedding_dropout,
-            timing_dropout=params.timing_dropout,
+            dropout=0.2,
+            timing_dropout=0.0,
             emb_dropouts_list=[emb_dropouts_map[emb_type] for emb_type in self.emb_types],
-            extra_content_dropout=self.morpho_emb_dropout,
-            max_len=params.sentence_max_len,
+            extra_content_dropout=None,
+            max_len=300,
             word_table_np=None,
         )
 
         self.encoder = Encoder(
-            params,
             self.embedding,
-            num_layers=params.num_layers,
-            num_heads=params.num_heads,
-            d_kv=params.d_kv,
-            d_ff=params.d_ff,
+            num_layers=12,
+            num_heads=8,
+            d_kv=64,
+            d_ff=2048,
             d_positional=self.d_positional,
-            relu_dropout=params.relu_dropout,
-            residual_dropout=params.residual_dropout,
-            attention_dropout=params.attention_dropout,
-            use_lal=params.use_lal,
-            lal_d_kv=params.lal_d_kv,
-            lal_d_proj=params.lal_d_proj,
-            lal_resdrop=params.lal_resdrop,
-            lal_pwff=params.lal_pwff,
-            lal_q_as_matrix=params.lal_q_as_matrix,
-            lal_partitioned=params.lal_partitioned,
+            relu_dropout=0.2,
+            residual_dropout=0.2,
+            attention_dropout=0.2,
+            use_lal=True,
+            lal_d_kv=64,
+            lal_d_proj=64,
+            lal_resdrop=True,
+            lal_pwff=True,
+            lal_q_as_matrix=False,
+            lal_partitioned=True,
         )
 
-        annotation_dim = ((label_vocab.size - 2) * self.lal_d_proj) if (self.use_lal and not self.lal_combine_as_self) else params.d_model
-        params.annotation_dim = annotation_dim
+        annotation_dim = ((label_vocab.size - 2) * self.lal_d_proj) if (self.use_lal and not self.lal_combine_as_self) else self.d_model
 
         self.f_label = nn.Sequential(
-            nn.Linear(annotation_dim, params.d_label_hidden),
-            LayerNormalization(params.d_label_hidden),
+            nn.Linear(annotation_dim, 250),
+            LayerNormalization(250),
             nn.ReLU(),
-            nn.Linear(params.d_label_hidden, label_vocab.size - 1 ),
+            nn.Linear(250, label_vocab.size - 1 ),
         )
-        self.dep_score = DepScore(params, type_vocab.size)
+        self.dep_score = DepScore(type_vocab.size, annotation_dim)
         self.loss_func = torch.nn.CrossEntropyLoss(size_average=False)
         self.loss_funt = torch.nn.CrossEntropyLoss(size_average=False)
 

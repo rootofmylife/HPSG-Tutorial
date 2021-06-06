@@ -2,14 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 
-from feaure_dropout import FeatureDropout
-from layer_normalization import LayerNormalization
+from model.feature_dropout import FeatureDropout
+from model.layer_normalization import LayerNormalization
 
 class MultiLevelEmbedding(nn.Module):
     def __init__(self,
             num_embeddings_list,
             d_embedding,
-            hparams,
             d_positional=None,
             max_len=300,
             normalize=True,
@@ -23,7 +22,6 @@ class MultiLevelEmbedding(nn.Module):
 
         self.d_embedding = d_embedding
         self.partitioned = d_positional is not None
-        self.hparams = hparams
 
         if self.partitioned:
             self.d_positional = d_positional
@@ -45,14 +43,7 @@ class MultiLevelEmbedding(nn.Module):
         emb_dropouts = []
         cun = len(num_embeddings_list)*2
         for i, (num_embeddings, emb_dropout) in enumerate(zip(num_embeddings_list, emb_dropouts_list)):
-            if hparams.use_cat:
-                if i == len(num_embeddings_list) - 1:
-                    #last is word
-                    emb = nn.Embedding(num_embeddings, self.d_content//cun - self.pretrain_dim, **kwargs)
-                else :
-                    emb = nn.Embedding(num_embeddings, self.d_content//cun, **kwargs)
-            else :
-                emb = nn.Embedding(num_embeddings, self.d_content - self.pretrain_dim, **kwargs)
+            emb = nn.Embedding(num_embeddings, self.d_content - self.pretrain_dim, **kwargs)
             embs.append(emb)
             emb_dropout = FeatureDropout(emb_dropout)
             emb_dropouts.append(emb_dropout)

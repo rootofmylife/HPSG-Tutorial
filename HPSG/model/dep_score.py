@@ -1,24 +1,22 @@
 import torch
 import torch.nn as nn
 
-from biaffine_attention import BiAAttention
-from bilinear import BiLinear
+from model.biaffine_attention import BiAAttention
+from model.bilinear import BiLinear
 
 class DepScore(nn.Module):
-    def __init__(self, hparams, num_labels):
+    def __init__(self, num_labels, annotation_dim):
         super(DepScore, self).__init__()
 
         self.dropout_out = nn.Dropout2d(p=0.33)
-        self.hparams = hparams
-        out_dim = hparams.d_biaffine#d_biaffine
-        self.arc_h = nn.Linear(hparams.annotation_dim, hparams.d_biaffine)
-        self.arc_c = nn.Linear(hparams.annotation_dim, hparams.d_biaffine)
+        self.arc_h = nn.Linear(annotation_dim, 1024)
+        self.arc_c = nn.Linear(annotation_dim, 1024)
 
-        self.attention = BiAAttention(hparams)
+        self.attention = BiAAttention()
 
-        self.type_h = nn.Linear(hparams.annotation_dim, hparams.d_label_hidden)
-        self.type_c = nn.Linear(hparams.annotation_dim, hparams.d_label_hidden)
-        self.bilinear = BiLinear(hparams.d_label_hidden, hparams.d_label_hidden, num_labels)
+        self.type_h = nn.Linear(annotation_dim, 250)
+        self.type_c = nn.Linear(annotation_dim, 250)
+        self.bilinear = BiLinear(250, 250, num_labels)
 
     def forward(self, outputs, outpute):
         # output from rnn [batch, length, hidden_size]

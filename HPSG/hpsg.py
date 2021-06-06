@@ -3,6 +3,8 @@ from constituency import Constituency, InternalParseNode
 
 from vocab import Vocabulary
 
+from model.chart_parser import ChartParser
+
 DEP_PATH = "../samples/dependency.txt"
 CON_PATH = "../samples/constituency.txt"
 
@@ -16,7 +18,7 @@ def hpsg():
     # [[('NNP', 'Ms.'), ('NNP', 'Haag'), ('VBZ', 'plays'), ('NNP', 'Elianti'), ('.', '.')]]
     return con
 
-def vocabularies():
+def train():
     parse_tree = hpsg().get_parse_tree()
 
     print("Constructing vocabularies...")
@@ -74,14 +76,21 @@ def vocabularies():
         for char in sorted(char_set):
             char_vocab.index(char)
 
-    tag_vocab.freeze()
-    word_vocab.freeze()
-    label_vocab.freeze()
-    char_vocab.freeze()
-    type_vocab.freeze()
+    tag_vocab.freeze() # ['<START>', '<STOP>', 'UNK', 'DT', 'NN', 'JJ', 'VBD', 'CD', 'NNS', 'IN', 'NNP', 'VBZ', '.']
+    word_vocab.freeze() # ['<START>', '<STOP>', '<UNK>', 'The', 'luxury', 'auto', 'maker', 'last', 'year', 'sold', '1,214', 'cars', 'in', 'the', 'U.S.']
+    label_vocab.freeze() # [(), ('<H>',), ('S',), ('NP',), ('VP',), ('PP',)]
+    char_vocab.freeze() # ['\x00', '\x01', '\x02', '\x03', '\x04', .. ]
+    type_vocab.freeze() # ['nsubj', 'det', 'nn']
+
+    print("Initializing model...")
+    parser = ChartParser(tag_vocab, word_vocab, label_vocab, char_vocab, type_vocab)
+
+    print("Training model...")
+
+    print("Finish training...")
 
 def main():
-    vocabularies()
-
+    train()
+    
 if __name__ == "__main__":
     main()

@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from layer_normalization import LayerNormalization
-from feature_dropout import FeatureDropout
+from model.layer_normalization import LayerNormalization
+from model.feature_dropout import FeatureDropout
 
 class PartitionedPositionwiseFeedForward(nn.Module):
     def __init__(self, d_hid, d_ff, d_positional, relu_dropout=0.1, residual_dropout=0.1):

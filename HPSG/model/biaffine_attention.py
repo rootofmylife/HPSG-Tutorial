@@ -6,11 +6,10 @@ class BiAAttention(nn.Module):
     Bi-Affine attention layer.
     '''
 
-    def __init__(self, hparams):
+    def __init__(self):
         super(BiAAttention, self).__init__()
-        self.hparams = hparams
 
-        self.dep_weight = nn.Parameter(torch.FloatTensor(hparams.d_biaffine + 1, hparams.d_biaffine + 1))
+        self.dep_weight = nn.Parameter(torch.FloatTensor(1024 + 1, 1024 + 1))
         nn.init.xavier_uniform_(self.dep_weight)
 
     def forward(self, input_d, input_e, input_s = None):

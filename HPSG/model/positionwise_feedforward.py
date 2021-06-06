@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from layer_normalization import LayerNormalization
-from feature_dropout import FeatureDropout
+from model.layer_normalization import LayerNormalization
+from model.feature_dropout import FeatureDropout
 
 class PositionwiseFeedForward(nn.Module):
     """
