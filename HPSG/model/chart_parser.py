@@ -1,5 +1,8 @@
 import torch
 import torch.nn as nn
+from torch import from_numpy
+
+import numpy as np
 
 from multilevel_embedding import MultiLevelEmbedding
 from encoder import Encoder
@@ -91,3 +94,18 @@ class ChartParser(nn.Module):
         self.loss_func = torch.nn.CrossEntropyLoss(size_average=False)
         self.loss_funt = torch.nn.CrossEntropyLoss(size_average=False)
 
+class BatchIndices:
+    """
+    Batch indices container class (used to implement packed batches)
+    """
+    def __init__(self, batch_idxs_np):
+        self.batch_idxs_np = batch_idxs_np
+        self.batch_idxs_torch = from_numpy(batch_idxs_np)
+
+        self.batch_size = int(1 + np.max(batch_idxs_np))
+
+        batch_idxs_np_extra = np.concatenate([[-1], batch_idxs_np, [-1]])
+        self.boundaries_np = np.nonzero(batch_idxs_np_extra[1:] != batch_idxs_np_extra[:-1])[0]
+        self.seq_lens_np = self.boundaries_np[1:] - self.boundaries_np[:-1]
+        assert len(self.seq_lens_np) == self.batch_size
+        self.max_len = int(np.max(self.boundaries_np[1:] - self.boundaries_np[:-1]))
