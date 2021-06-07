@@ -26,7 +26,6 @@ class ChartParser(nn.Module):
 
         self.d_model = 1024
         self.partitioned = True
-        self.d_content = (self.d_model // 2) if self.partitioned else self.d_model
         self.d_positional = (self.d_model // 2) if self.partitioned else None
 
         # Use LAL
