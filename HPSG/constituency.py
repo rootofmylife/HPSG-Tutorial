@@ -16,7 +16,9 @@ class Constituency(object):
 
         self._tokens = treebank.replace("(", " ( ").replace(")", " ) ").split()
 
-        self._trees, index = self.process(0, flag_sent=1)
+        self.cun_word = 0
+        self.cun_sent = 0
+        self._trees, index = self.process(0, 1)
 
         if index == len(self._tokens):
             print("Processed HPSG trees successfull...")
@@ -43,8 +45,6 @@ class Constituency(object):
 
     # (TOP (S (NP (NNP Ms.) (NNP Haag)) (VP (VBZ plays) (NP (NNP Elianti))) (. .)))
     def process(self, index, flag_sent):
-        cun_word = 0
-        cun_sent = 0
         trees = []
 
         while index < len(self._tokens) and self._tokens[index] == '(':
@@ -66,17 +66,17 @@ class Constituency(object):
                 index += 1
 
                 if label != '-NONE-':
-                    trees.append(LeafTreebankNode(label, word, head=cun_word + 1,
-                                 father=self.head[cun_sent][cun_word], type=self.type[cun_sent][cun_word]))
-                    cun_word += 1
+                    trees.append(LeafTreebankNode(label, word, head=self.cun_word + 1,
+                                 father=self.head[self.cun_sent][self.cun_word], type=self.type[self.cun_sent][self.cun_word]))
+                    self.cun_word += 1
 
             while paren_count > 0:
                 index += 1
                 paren_count -= 1
 
             if flag_sent == 1:
-                cun_sent += 1
-                cun_word = 0
+                self.cun_sent += 1
+                self.cun_word = 0
 
         return trees, index
 
