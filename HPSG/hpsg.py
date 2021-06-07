@@ -10,8 +10,8 @@ from vocab import Vocabulary
 
 from model.chart_parser import ChartParser
 
-DEP_PATH = "../samples/dependency.txt"
-CON_PATH = "../samples/constituency.txt"
+DEP_PATH = "../samples/dep_train.txt"
+CON_PATH = "../samples/con_train.txt"
 
 def format_elapsed(start_time):
     elapsed_time = int(time.time() - start_time)
@@ -100,7 +100,7 @@ def train():
     print("Initializing model...\n")
     parser = ChartParser(tag_vocab, word_vocab, label_vocab, char_vocab, type_vocab)
 
-    print("Initializing optimizer...")
+    print("Initializing optimizer...\n")
     trainable_parameters = [param for param in parser.parameters() if param.requires_grad]
     trainer = torch.optim.Adam(trainable_parameters, lr=1., betas=(0.9, 0.98), eps=1e-9)
     warmup_coeff = 0.0008 / 160
@@ -115,16 +115,16 @@ def train():
     print("Training model...\n")
     total_processed = 0
     current_processed = 0
-    # check_every = len(parse_tree) / 4
+    check_every = len(parse_tree) / 4
     best_dev_score = -np.inf
     # best_model_path = None
 
     start_time = time.time()
 
     for epoch in itertools.count(start=1):
-        if epoch > 150: # Set epoch
+        if epoch > 2: # Set epoch
             break
-        
+
         np.random.shuffle(parse_tree)
         epoch_start_time = time.time()
 
@@ -177,9 +177,9 @@ def train():
                 )
             )
 
-            # if current_processed >= check_every:
-            #     current_processed -= check_every
-            #     check_dev(epoch)
+            if current_processed >= check_every:
+                current_processed -= check_every
+                # check_dev(epoch)
 
         # adjust learning rate at the end of an epoch
         if (total_processed // 250 + 1) > 160:
