@@ -112,3 +112,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+con_dev.txt
+con_test.txt
+con_train.txt
+
+dep_dev.txt
+dep_test.txt
+dep_train.txt
