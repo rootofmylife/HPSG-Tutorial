@@ -37,6 +37,8 @@ class ChartParser(nn.Module):
         self.partitioned = True
         self.d_positional = (self.d_model // 2) if self.partitioned else None
 
+        self.use_tags = False
+
         # Use LAL
         self.use_lal = True
         self.lal_d_kv = 64
