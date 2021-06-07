@@ -80,10 +80,8 @@ class MultiLevelEmbedding(nn.Module):
             emb_dropout(emb(x), batch_idxs)
             for x, emb, emb_dropout in zip(xs, self.embs, self.emb_dropouts)
             ]
-        if self.hparams.use_cat:
-            content_annotations = torch.cat(content_annotations, dim = -1)
-        else :
-            content_annotations = sum(content_annotations)
+        content_annotations = sum(content_annotations)
+        
         if self.pretrain_dim != 0:
             content_annotations = torch.cat([content_annotations, self.pretrain_emb_dropout(self.pretrain_emb(pre_words_idxs), batch_idxs)], dim  = 1)
 
@@ -91,11 +89,7 @@ class MultiLevelEmbedding(nn.Module):
             if self.extra_content_dropout is not None:
                 extra_content_annotations = self.extra_content_dropout(extra_content_annotations, batch_idxs)
 
-            if self.hparams.use_cat:
-                content_annotations = torch.cat(
-                    [content_annotations, extra_content_annotations], dim=-1)
-            else:
-                content_annotations += extra_content_annotations
+            content_annotations += extra_content_annotations
 
         timing_signal = []
         for seq_len in batch_idxs.seq_lens_np:
