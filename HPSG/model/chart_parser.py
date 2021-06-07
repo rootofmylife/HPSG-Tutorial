@@ -8,11 +8,20 @@ from model.multilevel_embedding import MultiLevelEmbedding
 from model.encoder import Encoder
 from model.layer_normalization import LayerNormalization
 from model.dep_score import DepScore
+# from ..constituency import InternalParseNode, LeafParseNode
+
+import pyximport
+pyximport.install(setup_args={"include_dirs": np.get_include()})
+
+import model.hpsg_decoder
+import model.const_decoder
 
 START = "<START>"
 STOP = "<STOP>"
 UNK = "<UNK>"
 TAG_UNK = "UNK"
+
+Sub_Head = "<H>"
 
 class ChartParser(nn.Module):
     def __init__(self, tag_vocab, word_vocab, label_vocab, char_vocab, type_vocab):
@@ -127,7 +136,7 @@ class ChartParser(nn.Module):
         batch_idxs = np.zeros(packed_len, dtype=int)
         for snum, sentence in enumerate(sentences):
             for (tag, word) in [(START, START)] + sentence + [(STOP, STOP)]:
-                tag_idxs[i] = 0 if (not self.use_tags and self.f_tag is None) else self.tag_vocab.index_or_unk(tag, TAG_UNK)
+                tag_idxs[i] = 0 if (not self.use_tags) else self.tag_vocab.index_or_unk(tag, TAG_UNK)
                 if word not in (START, STOP):
                     count = self.word_vocab.count(word)
                     if not count or (is_train and np.random.rand() < 1 / (1 + count)):
@@ -152,10 +161,7 @@ class ChartParser(nn.Module):
         extra_content_annotations = None
 
         if len(extra_content_annotations_list) > 1 :
-            if self.hparams.use_cat:
-                extra_content_annotations = torch.cat(extra_content_annotations_list, dim = -1)
-            else:
-                extra_content_annotations = sum(extra_content_annotations_list)
+            extra_content_annotations = sum(extra_content_annotations_list)
         elif len(extra_content_annotations_list) == 1:
             extra_content_annotations = extra_content_annotations_list[0]
 
@@ -245,6 +251,102 @@ class ChartParser(nn.Module):
                    + 0.5 * self.loss_funt(type_score[1:, :],from_numpy(np.array(type_gather)).requires_grad_(False))
 
         return None, loss
+
+    def parse_from_annotations(self, fencepost_annotations_start, fencepost_annotations_end, sentence, sentence_idx, gold=None):
+        is_train = gold is not None
+        contributions = None
+        label_scores_chart = self.label_scores_from_annotations(fencepost_annotations_start, fencepost_annotations_end)
+        label_scores_chart_np = label_scores_chart.cpu().data.numpy()
+
+        if is_train:
+            decoder_args = dict(
+                sentence_len=len(sentence),
+                label_scores_chart=label_scores_chart_np,
+                gold=gold,
+                label_vocab=self.label_vocab,
+                is_train=is_train)
+
+            p_score, p_i, p_j, p_label, p_augment = const_decoder.decode(False, **decoder_args)
+            g_score, g_i, g_j, g_label, g_augment = const_decoder.decode(True, **decoder_args)
+            return p_i, p_j, p_label, p_augment, g_i, g_j, g_label
+        else:
+            arc_score, type_score = self.dep_score(fencepost_annotations_start, fencepost_annotations_end)
+
+            arc_score_dc = torch.transpose(arc_score, 0, 1)
+            arc_dc_np = arc_score_dc.cpu().data.numpy()
+
+            type_np = type_score.cpu().data.numpy()
+            type_np = type_np[1:, :]  # remove root
+            type = type_np.argmax(axis=1)
+            return self.decode_from_chart(sentence, label_scores_chart_np, arc_dc_np, type, sentence_idx=sentence_idx, contributions=contributions)
+
+    def decode_from_chart(self, sentence, label_scores_chart_np, arc_dc_np, type, sentence_idx=None, gold=None, contributions=None):
+
+        decoder_args = dict(
+            sentence_len=len(sentence),
+            label_scores_chart= label_scores_chart_np * 0.5,
+            type_scores_chart = arc_dc_np * (1.0 - 0.5),
+            gold=gold,
+            label_vocab=self.label_vocab,
+            type_vocab = self.type_vocab,
+            is_train=False)
+
+        force_gold = (gold is not None)
+
+        score, p_i, p_j, p_label, p_father, p_type, _ = hpsg_decoder.decode(force_gold, **decoder_args)
+        if contributions is not None:
+            d_l = (self.label_vocab.size - 2)
+            mb_size = (self.current_attns.shape[0] // d_l)
+            print('SENTENCE', sentence)
+
+        idx = -1
+        def make_tree():
+            nonlocal idx
+            idx += 1
+            i, j, label_idx = p_i[idx], p_j[idx], p_label[idx]
+            label = self.label_vocab.value(label_idx)
+            if contributions is not None:
+                if label_idx > 0:
+                    print(i, sentence[i], j, sentence[j-1], label, label_idx, contributions[i,j,label_idx-1])
+                    print("CONTRIBUTIONS")
+                    print(list(enumerate(contributions[i,j])))
+                    print("ATTENTION DIST")
+                    print(torch.softmax(self.current_attns[sentence_idx::mb_size, 0, i:j+1], -1))
+            if (i + 1) >= j:
+                tag, word = sentence[i]
+                if type is not None:
+                    tree = LeafParseNode(int(i), tag, word, p_father[i], self.type_vocab.value(type[i]))
+                else:
+                    tree = LeafParseNode(int(i), tag, word, p_father[i], self.type_vocab.value(p_type[i]))
+                if label:
+                    assert label[0] != Sub_Head
+                    tree = InternalParseNode(label, [tree])
+                return [tree]
+            else:
+                left_trees = make_tree()
+                right_trees = make_tree()
+                children = left_trees + right_trees
+                if label and label[0] != Sub_Head:
+                    return [InternalParseNode(label, children)]
+                else:
+                    return children
+
+        tree_list = make_tree()
+        assert len(tree_list) == 1
+        tree = tree_list[0]
+        return tree, score
+
+    def label_scores_from_annotations(self, fencepost_annotations_start, fencepost_annotations_end):
+
+        span_features = (torch.unsqueeze(fencepost_annotations_end, 0)
+                         - torch.unsqueeze(fencepost_annotations_start, 1))
+
+        label_scores_chart = self.f_label(span_features)
+        label_scores_chart = torch.cat([
+            label_scores_chart.new_zeros((label_scores_chart.size(0), label_scores_chart.size(1), 1)),
+            label_scores_chart
+            ], 2)
+        return label_scores_chart
 
 class BatchIndices:
     """
