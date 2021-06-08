@@ -8,13 +8,13 @@ from model.multilevel_embedding import MultiLevelEmbedding
 from model.encoder import Encoder
 from model.layer_normalization import LayerNormalization
 from model.dep_score import DepScore
-# from ..constituency import InternalParseNode, LeafParseNode
+from model.module.constituency import InternalParseNode, LeafParseNode
 
 import pyximport
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 
-import model.hpsg_decoder
-import model.const_decoder
+from model import hpsg_decoder
+from model import const_decoder
 
 START = "<START>"
 STOP = "<STOP>"
@@ -37,13 +37,13 @@ class ChartParser(nn.Module):
         self.partitioned = True
         self.d_positional = (self.d_model // 2) if self.partitioned else None
 
-        self.use_tags = False
+        self.use_tags = True
 
         # Use LAL
         self.use_lal = True
-        self.lal_d_kv = 64
-        self.lal_d_proj = 64
-        self.lal_resdrop = True
+        self.lal_d_kv = 128
+        self.lal_d_proj = 128
+        self.lal_resdrop = False
         self.lal_pwff = True
         self.lal_q_as_matrix = False
         self.lal_partitioned = True
@@ -76,7 +76,7 @@ class ChartParser(nn.Module):
 
         self.encoder = Encoder(
             self.embedding,
-            num_layers=12,
+            num_layers=3,
             num_heads=8,
             d_kv=64,
             d_ff=2048,
@@ -85,9 +85,9 @@ class ChartParser(nn.Module):
             residual_dropout=0.2,
             attention_dropout=0.2,
             use_lal=True,
-            lal_d_kv=64,
-            lal_d_proj=64,
-            lal_resdrop=True,
+            lal_d_kv=128,
+            lal_d_proj=128,
+            lal_resdrop=False,
             lal_pwff=True,
             lal_q_as_matrix=False,
             lal_partitioned=True,
@@ -99,7 +99,7 @@ class ChartParser(nn.Module):
             nn.Linear(annotation_dim, 250),
             LayerNormalization(250),
             nn.ReLU(),
-            nn.Linear(250, label_vocab.size - 1 ),
+            nn.Linear(250, label_vocab.size - 1),
         )
         self.dep_score = DepScore(type_vocab.size, annotation_dim)
         self.loss_func = torch.nn.CrossEntropyLoss(size_average=False)
@@ -250,7 +250,7 @@ class ChartParser(nn.Module):
             assert len(arc_gather) == leng - 1
             arc_score = torch.transpose(arc_score,0, 1)
             loss = loss + 0.5 * self.loss_func(arc_score[1:, :], from_numpy(np.array(arc_gather)).requires_grad_(False)) \
-                   + 0.5 * self.loss_funt(type_score[1:, :],from_numpy(np.array(type_gather)).requires_grad_(False))
+                   + 0.5 * self.loss_funt(type_score[1:, :], from_numpy(np.array(type_gather)).requires_grad_(False))
 
         return None, loss
 
