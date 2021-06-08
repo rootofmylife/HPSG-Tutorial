@@ -36,7 +36,7 @@ def hpsg():
 def train():
     parse_tree = hpsg().get_parse_tree()
 
-    print("Constructing vocabularies...\n")
+    print("Constructing vocabularies...")
     tag_vocab = Vocabulary()
     tag_vocab.index("<START>")
     tag_vocab.index("<STOP>")
@@ -102,7 +102,7 @@ def train():
             "Word size: {}; "
             "Label size: {}; " 
             "Char size: {}; "
-            "Type size: {}".format(
+            "Type size: {}\n".format(
                 tag_vocab.size,
                 word_vocab.size,
                 label_vocab.size,
