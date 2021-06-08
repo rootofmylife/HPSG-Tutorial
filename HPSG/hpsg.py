@@ -10,8 +10,8 @@ from model.module.vocab import Vocabulary
 
 from model.chart_parser import ChartParser
 
-DEP_PATH = "../samples/ptb_dep_train.txt"
-CON_PATH = "../samples/ptb_con_train.txt"
+DEP_PATH = "../samples/dep_train.txt"
+CON_PATH = "../samples/con_train.txt"
 
 def format_elapsed(start_time):
     elapsed_time = int(time.time() - start_time)
