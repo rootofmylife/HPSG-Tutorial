@@ -1,4 +1,3 @@
-import collections.abc
 
 Sub_Head = "<H>"
 
@@ -233,3 +232,40 @@ class InternalParseNode(object):
     def leaves(self):
         for child in self.children:
             yield from child.leaves()
+
+    def oracle_label(self, left, right):
+        enclosing = self.enclosing(left, right)
+        if enclosing.left == left and enclosing.right == right:
+            return enclosing.label
+        return ()
+
+    def oracle_splits(self, left, right):
+        return [
+            child.left
+            for child in self.enclosing(left, right).children
+            if left < child.left < right
+        ]
+
+    def enclosing(self, left, right):
+        assert self.left <= left < right <= self.right
+        for child in self.children:
+            if isinstance(child, LeafParseNode):
+                continue
+            if child.left <= left < right <= child.right:
+                return child.enclosing(left, right)
+        return self
+
+    def oracle_type(self, left, right):
+        enclosing = self.chil_enclosing(left, right)
+        return enclosing.type
+
+    def oracle_head(self, left, right):
+        enclosing = self.chil_enclosing(left, right)
+        return enclosing.head
+
+    def chil_enclosing(self, left, right):
+        assert self.left <= left < right <= self.right
+        for child in self.children:
+            if child.left <= left < right <= child.right:
+                return child.chil_enclosing(left, right)
+        return self
