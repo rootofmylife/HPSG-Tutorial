@@ -97,6 +97,20 @@ def train():
     char_vocab.freeze() # ['\x00', '\x01', '\x02', '\x03', '\x04', .. ]
     type_vocab.freeze() # ['nsubj', 'det', 'nn']
 
+    print(
+            "Tag size: {}; " 
+            "Word size: {}; "
+            "Label size: {}; " 
+            "Char size: {}; "
+            "Type size: {}".format(
+                tag_vocab.size,
+                word_vocab.size,
+                label_vocab.size,
+                char_vocab.size,
+                type_vocab.size
+            )
+        )
+
     print("Initializing model...\n")
     parser = ChartParser(tag_vocab, word_vocab, label_vocab, char_vocab, type_vocab)
 
