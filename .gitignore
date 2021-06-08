@@ -120,3 +120,5 @@ con_train.txt
 dep_dev.txt
 dep_test.txt
 dep_train.txt
+samples/ptb_con_train.txt
+samples/ptb_dep_train.txt
