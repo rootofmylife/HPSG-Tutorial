@@ -13,6 +13,9 @@ class Dependency(object):
         with open(self._file_path) as fin:
             lines = [line.strip() for line in fin]
 
+        # Fix bug that not includes final word.
+        lines.append(None)
+
         i, start = 0, 0
 
         for line in lines:
