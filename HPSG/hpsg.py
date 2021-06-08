@@ -3,15 +3,15 @@ import numpy as np
 import itertools
 import time
 
-from dependency import Dependency
-from constituency import Constituency, InternalParseNode
+from model.module.dependency import Dependency
+from model.module.constituency import Constituency, InternalParseNode
 
-from vocab import Vocabulary
+from model.module.vocab import Vocabulary
 
 from model.chart_parser import ChartParser
 
-DEP_PATH = "../samples/dep_train.txt"
-CON_PATH = "../samples/con_train.txt"
+DEP_PATH = "../samples/ptb_dep_train.txt"
+CON_PATH = "../samples/ptb_con_train.txt"
 
 def format_elapsed(start_time):
     elapsed_time = int(time.time() - start_time)
