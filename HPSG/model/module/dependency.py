@@ -38,7 +38,7 @@ class Dependency(object):
             word.append(value[1])
             pos.append(value[4])
             gold_pos.append(value[3])
-            head.append(value[6])
+            head.append(int(value[6]))
             type.append(value[7])
 
         return word, pos, gold_pos, head, type
