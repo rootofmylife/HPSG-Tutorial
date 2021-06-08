@@ -1,3 +1,4 @@
+from loguru import logger
 
 Sub_Head = "<H>"
 
@@ -42,6 +43,7 @@ class Constituency(object):
     def get_hpsg_tree(self):
         return [[(leaf.tag, leaf.word) for leaf in tree.leaves()] for tree in self._parse_tree]
 
+    @logger.catch
     # (TOP (S (NP (NNP Ms.) (NNP Haag)) (VP (VBZ plays) (NP (NNP Elianti))) (. .)))
     def process(self, index, flag_sent):
         trees = []
