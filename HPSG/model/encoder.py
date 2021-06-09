@@ -26,7 +26,7 @@ class Encoder(nn.Module):
 
         self.stacks = []
 
-        for i in range(12):
+        for i in range(3):
             attn = MultiHeadAttention(num_heads, d_model, d_k, d_v, residual_dropout=residual_dropout,
                                       attention_dropout=attention_dropout, d_positional=d_positional)
             if d_positional is None:
@@ -67,10 +67,14 @@ class Encoder(nn.Module):
     def forward(self, xs, pre_words_idxs, batch_idxs, extra_content_annotations=None):
         emb = self.embedding_container[0]
         res, res_c, timing_signal, batch_idxs = emb(xs, pre_words_idxs, batch_idxs, extra_content_annotations=extra_content_annotations)
-
+        print(res.shape)
         for i, (attn, ff) in enumerate(self.stacks):
             res, current_attns = attn(res, batch_idxs)
+            print(res.shape)
             if ff is not None:
                 res = ff(res, batch_idxs)
-
+                print("in ff: ")
+                print(res.shape)
+                print("end ff.\n")
+        print(res.shape)
         return res, current_attns
