@@ -159,15 +159,7 @@ class ChartParser(nn.Module):
         ]
         pre_words_idxs = from_numpy(word_idxs).requires_grad_(False)
 
-        extra_content_annotations_list = []
-        extra_content_annotations = None
-
-        if len(extra_content_annotations_list) > 1 :
-            extra_content_annotations = sum(extra_content_annotations_list)
-        elif len(extra_content_annotations_list) == 1:
-            extra_content_annotations = extra_content_annotations_list[0]
-
-        annotations, self.current_attns = self.encoder(emb_idxs, pre_words_idxs, batch_idxs, extra_content_annotations=extra_content_annotations)
+        annotations, self.current_attns = self.encoder(emb_idxs, pre_words_idxs, batch_idxs)
 
         if self.partitioned and not self.use_lal:
             annotations = torch.cat([
